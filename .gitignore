@@ -1,0 +1,137 @@
+# Build directories
+/build/
+/cmake-build-debug/
+/out/
+/bin/
+/dist/
+
+# CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+_install_manifest.txt
+
+# Compiled objects & libraries
+*.o
+*.obj
+*.lo
+*.a
+*.so
+*.dylib
+*.lib
+*.dll
+*.exe
+*.out
+
+# Debug symbols
+*.dSYM/
+
+# Generated shader binaries (SPIR-V)
+*.spv
+*.spvasm
+
+# IDE/editor
+.vscode/
+.vs/
+.idea/
+*.code-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary / swap
+*~
+*.swp
+*.swo
+*.tmp
+*.log
+
+# Packaging / installer
+*.pkg
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# CTest / CPack
+Testing/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_CPack_Packages/
+
+# Misc
+.env
+.vscode-test/
+```// filepath: /Users/madhav/Workspace/vulkan-study/VkPractice/vulkan-cmake-app/.gitignore
+# Build directories
+/build/
+/cmake-build-debug/
+/out/
+/bin/
+/dist/
+
+# CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+_install_manifest.txt
+
+# Compiled objects & libraries
+*.o
+*.obj
+*.lo
+*.a
+*.so
+*.dylib
+*.lib
+*.dll
+*.exe
+*.out
+
+# Debug symbols
+*.dSYM/
+
+# Generated shader binaries (SPIR-V)
+*.spv
+*.spvasm
+
+# IDE/editor
+.vscode/
+.vs/
+.idea/
+*.code-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary / swap
+*~
+*.swp
+*.swo
+*.tmp
+*.log
+
+# Packaging / installer
+*.pkg
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# CTest / CPack
+Testing/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_CPack_Packages/
+
+# Misc
+.env
+.vscode-test/
