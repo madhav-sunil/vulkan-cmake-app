@@ -1,5 +1,5 @@
 #include <iostream>
-#include "vk_app.hpp"
+#include "VkApp.hpp"
 
 int main() {
     VkApp app;
