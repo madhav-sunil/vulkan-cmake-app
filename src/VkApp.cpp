@@ -36,6 +36,12 @@ bool VkApp::initialize() {
         return false;
     }
 
+    triangleRenderer_ = std::make_unique<TriangleRenderer>(
+        vulkanCore.device(),
+        vulkanCore.renderPass(),
+        vulkanCore.extent()
+    );
+
     return true;  // Return true if initialization is successful
 }
 
@@ -48,8 +54,7 @@ void VkApp::run() {
         // Draw frame using VulkanCore
         bool ok = this->getVulkanInstance()
                         .drawFrame([&](VkCommandBuffer cmd, uint32_t imageIndex) {
-            // Empty for now - just clear screen
-            // Grid rendering will go here later
+                                triangleRenderer_->recordCommands(cmd);
         });
         
         if (!ok) {
@@ -64,4 +69,11 @@ void VkApp::run() {
 
 void VkApp::cleanup() {
     // Cleanup code for Vulkan and the application
+    triangleRenderer_.reset();
+    
+    if (window) {
+        glfwDestroyWindow(window);
+        window = nullptr;
+    }
+    glfwTerminate();
 }

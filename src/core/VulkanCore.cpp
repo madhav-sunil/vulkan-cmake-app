@@ -155,7 +155,7 @@ bool VulkanCore::createInstance() {
     appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);
     appInfo.pEngineName = "no-engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1,0,0);
-    appInfo.apiVersion = VK_API_VERSION_1_1;
+    appInfo.apiVersion = VK_API_VERSION_1_2;
 
     uint32_t glfwExtCount = 0;
     const char** glfwExt = glfwGetRequiredInstanceExtensions(&glfwExtCount);
@@ -314,10 +314,12 @@ VkSurfaceFormatKHR VulkanCore::chooseSurfaceFormat(const std::vector<VkSurfaceFo
     }
     return avail[0];
 }
+
 VkPresentModeKHR VulkanCore::choosePresentMode(const std::vector<VkPresentModeKHR>& avail) {
     for (const auto& p : avail) if (p == VK_PRESENT_MODE_MAILBOX_KHR) return p;
     return VK_PRESENT_MODE_FIFO_KHR;
 }
+
 VkExtent2D VulkanCore::chooseExtent(const VkSurfaceCapabilitiesKHR& caps) {
     if (caps.currentExtent.width != UINT32_MAX) return caps.currentExtent;
     // fallback: use current window size (could be improved)
