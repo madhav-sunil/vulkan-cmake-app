@@ -29,5 +29,5 @@ VSOut vs_main(uint vertexID : SV_VertexID)
 // Fragment: solid red (you can use IN.color instead if you want interpolated color)
 float4 ps_main(VSOut IN) : SV_Target
 {
-    return float4(1.0, 0.0, 0.0, 1.0);
+    return float4(IN.color, 1.0);
 }

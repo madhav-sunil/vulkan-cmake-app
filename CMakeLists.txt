@@ -46,3 +46,36 @@ if(BUILD_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt")
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# --- Compile Slang shaders to SPIR-V ---
+find_program(SLANGC_EXECUTABLE NAMES slangc)
+
+if(NOT SLANGC_EXECUTABLE)
+    message(FATAL_ERROR "slangc not found. Install Slang (https://github.com/shader-slang/slang) or put slangc on PATH.")
+endif()
+
+set(SLANG_TRIANGLE ${CMAKE_SOURCE_DIR}/shaders/Triangle.slang)
+set(TRIANGLE_VERT_SPV ${CMAKE_BINARY_DIR}/shaders/triangle.vert.spv)
+set(TRIANGLE_FRAG_SPV ${CMAKE_BINARY_DIR}/shaders/triangle.frag.spv)
+
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/shaders)
+
+add_custom_command(
+    OUTPUT ${TRIANGLE_VERT_SPV} ${TRIANGLE_FRAG_SPV}
+    COMMAND ${SLANGC_EXECUTABLE} -target spirv -entry vs_main -stage vertex -o ${TRIANGLE_VERT_SPV} ${SLANG_TRIANGLE}
+    COMMAND ${SLANGC_EXECUTABLE} -target spirv -entry ps_main -stage fragment -o ${TRIANGLE_FRAG_SPV} ${SLANG_TRIANGLE}
+    DEPENDS ${SLANG_TRIANGLE}
+    COMMENT "Compiling triangle.slang to SPIR-V"
+    VERBATIM
+)
+
+add_custom_target(triangle_shaders ALL DEPENDS ${TRIANGLE_VERT_SPV} ${TRIANGLE_FRAG_SPV})
+add_dependencies(${PROJECT_NAME} triangle_shaders)
+
+# Copy shaders to runtime directory so the app can find them
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TRIANGLE_VERT_SPV} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TRIANGLE_FRAG_SPV} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/
+    COMMENT "Copying SPIR-V shaders to runtime directory"
+)
