@@ -1,104 +1,109 @@
 #pragma once
-#include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
-#include <vector>
 #include <functional>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 namespace vulkan {
 
 class VulkanCore {
 public:
-    VulkanCore() = default;
-    ~VulkanCore();
+  VulkanCore() = default;
+  ~VulkanCore();
 
-    // Initialize with an already-created GLFW window
-    // returns false on failure
-    bool initialize(GLFWwindow* window);
+  // Initialize with an already-created GLFW window
+  // returns false on failure
+  bool initialize(GLFWwindow *window);
 
-    // Cleanup resources
-    void cleanup();
+  // Cleanup resources
+  void cleanup();
 
-    // Simple frame loop helper:
-    // recordFunc is called inside an active renderpass with (cmdBuffer, imageIndex)
-    bool drawFrame(const std::function<void(VkCommandBuffer, uint32_t)>& recordFunc);
+  // Simple frame loop helper:
+  // recordFunc is called inside an active renderpass with (cmdBuffer,
+  // imageIndex)
+  bool
+  drawFrame(const std::function<void(VkCommandBuffer, uint32_t)> &recordFunc);
 
-    // Accessors for renderers
-    auto device() const -> VkDevice { return device_; }
-    auto physicalDevice() const -> VkPhysicalDevice { return physicalDevice_; }
-    auto extent() const -> VkExtent2D { return extent_; }
-    auto renderPass() const -> VkRenderPass { return renderPass_; }
-    auto descriptorPool() const -> VkDescriptorPool { return descriptorPool_; }
-    auto commandPool() const -> VkCommandPool { return commandPool_; }
-    auto graphicsQueue() const -> VkQueue { return graphicsQueue_; }
-    auto swapchainImageFormat() const -> VkFormat { return swapchainImageFormat_; }
+  // Accessors for renderers
+  auto device() const -> VkDevice { return _device; }
+  auto physicalDevice() const -> VkPhysicalDevice { return _physicalDevice; }
+  auto extent() const -> VkExtent2D { return _extent; }
+  auto renderPass() const -> VkRenderPass { return _renderPass; }
+  auto descriptorPool() const -> VkDescriptorPool { return _descriptorPool; }
+  auto commandPool() const -> VkCommandPool { return _commandPool; }
+  auto graphicsQueue() const -> VkQueue { return _graphicsQueue; }
+  auto swapchainImageFormat() const -> VkFormat {
+    return _swapchainImageFormat;
+  }
 
 private:
-    // init steps
-    bool createInstance();
-    bool createSurface(GLFWwindow* window);
-    bool pickPhysicalDevice();
-    bool createLogicalDevice();
-    bool createSwapchain();
-    bool createImageViews();
-    bool createRenderPass();
-    bool createFramebuffers();
-    bool createCommandPoolAndBuffers();
-    bool createSyncObjects();
-    bool createDescriptorPool();
+  // init steps
+  bool createInstance();
+  bool createSurface(GLFWwindow *window);
+  bool pickPhysicalDevice();
+  bool createLogicalDevice();
+  bool createSwapchain();
+  bool createImageViews();
+  bool createRenderPass();
+  bool createFramebuffers();
+  bool createCommandPoolAndBuffers();
+  bool createSyncObjects();
+  bool createDescriptorPool();
 
-    // helpers
-    auto chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& avail) -> VkSurfaceFormatKHR;
-    auto choosePresentMode(const std::vector<VkPresentModeKHR>& avail) -> VkPresentModeKHR;
-    auto chooseExtent(const VkSurfaceCapabilitiesKHR& caps) -> VkExtent2D;
+  // helpers
+  auto chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &avail)
+      -> VkSurfaceFormatKHR;
+  auto choosePresentMode(const std::vector<VkPresentModeKHR> &avail)
+      -> VkPresentModeKHR;
+  auto chooseExtent(const VkSurfaceCapabilitiesKHR &caps) -> VkExtent2D;
 
-    auto checkValidationLayerSupport() const -> bool;
-    auto setupDebugMessenger() -> void;
-    auto destroyDebugMessenger() -> void;
+  auto checkValidationLayerSupport() const -> bool;
+  auto setupDebugMessenger() -> void;
+  auto destroyDebugMessenger() -> void;
 
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT       messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT              messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT*  pCallbackData,
-        void*                                        pUserData);
-
+  static VKAPI_ATTR VkBool32 VKAPI_CALL
+  debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                VkDebugUtilsMessageTypeFlagsEXT messageType,
+                const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+                void *pUserData);
 
 private:
 #ifdef NDEBUG
-    const bool enableValidationLayers_ = false;
+  const bool enableValidationLayers_ = false;
 #else
-    const bool enableValidationLayers_ = true;
+  const bool enableValidationLayers_ = true;
 #endif
 
-    VkInstance      instance_ = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT debugMessenger_ = VK_NULL_HANDLE;
-    VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
-    VkDevice        device_ = VK_NULL_HANDLE;
-    VkQueue         graphicsQueue_ = VK_NULL_HANDLE;
-    VkQueue         presentQueue_ = VK_NULL_HANDLE;
-    VkSurfaceKHR    surface_ = VK_NULL_HANDLE;
+  VkInstance _instance = VK_NULL_HANDLE;
+  VkDebugUtilsMessengerEXT _debugMessenger = VK_NULL_HANDLE;
+  VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+  VkDevice _device = VK_NULL_HANDLE;
+  VkQueue _graphicsQueue = VK_NULL_HANDLE;
+  VkQueue _presentQueue = VK_NULL_HANDLE;
+  VkSurfaceKHR _surface = VK_NULL_HANDLE;
 
-    uint32_t graphicsFamily_ = UINT32_MAX;  // store graphics queue family index
-    uint32_t presentFamily_ = UINT32_MAX;   // (optional, for clarity)
+  uint32_t _graphicsFamily = UINT32_MAX; // store graphics queue family index
+  uint32_t _presentFamily = UINT32_MAX;  // (optional, for clarity)
 
-    VkSwapchainKHR       swapchain_ = VK_NULL_HANDLE;
-    std::vector<VkImage> swapchainImages_;
-    std::vector<VkImageView> swapchainImageViews_;
-    VkFormat        swapchainImageFormat_ = VK_FORMAT_UNDEFINED;
-    VkExtent2D      extent_{ 800, 600 };
+  VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
+  std::vector<VkImage> _swapchainImages;
+  std::vector<VkImageView> _swapchainImageViews;
+  VkFormat _swapchainImageFormat = VK_FORMAT_UNDEFINED;
+  VkExtent2D _extent{800, 600};
 
-    VkRenderPass    renderPass_ = VK_NULL_HANDLE;
-    std::vector<VkFramebuffer> framebuffers_;
+  VkRenderPass _renderPass = VK_NULL_HANDLE;
+  std::vector<VkFramebuffer> _framebuffers;
 
-    VkCommandPool   commandPool_ = VK_NULL_HANDLE;
-    std::vector<VkCommandBuffer> commandBuffers_;
+  VkCommandPool _commandPool = VK_NULL_HANDLE;
+  std::vector<VkCommandBuffer> _commandBuffers;
 
-    // sync
-    std::vector<VkSemaphore> imageAvailable_;
-    std::vector<VkSemaphore> renderFinished_;
-    std::vector<VkFence> inFlightFences_;
-    size_t currentFrame_ = 0;
-    const size_t MAX_FRAMES_IN_FLIGHT = 2;
+  // sync
+  std::vector<VkSemaphore> _imageAvailable;
+  std::vector<VkSemaphore> _renderFinished;
+  std::vector<VkFence> _inFlightFences;
+  size_t _currentFrame = 0;
+  const size_t MAX_FRAMES_IN_FLIGHT = 2;
 
-    VkDescriptorPool   descriptorPool_ = VK_NULL_HANDLE;
+  VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
 };
-}
+} // namespace vulkan

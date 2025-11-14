@@ -1,24 +1,30 @@
 #pragma once
-#include <vulkan/vulkan.h>
-#include "VulkanCore.hpp"
 #include "TriangleRenderer.hpp"
+#include "VulkanCore.hpp"
+#include <vulkan/vulkan.h>
 
 class VkApp {
 public:
-    VkApp();
-    ~VkApp();
+  VkApp();
+  ~VkApp();
 
-    bool initialize();
-    void run();
-    void cleanup();
-    
-    auto getWindow() const -> GLFWwindow* { return window; }
-    auto getVulkanInstance()  ->  vulkan::VulkanCore& { return vulkanCore; }
+  bool initialize();
+  void run();
+  void cleanup();
+
+  auto getWindow() const -> GLFWwindow * { return _window; }
+  auto getVulkanInstance() -> vulkan::VulkanCore & { return _vulkanCore; }
 
 private:
+  GLFWwindow *_window = nullptr;
+  vulkan::VulkanCore _vulkanCore;
+  std::unique_ptr<TriangleRenderer> _triangleRenderer;
 
-    GLFWwindow* window = nullptr;
-    vulkan::VulkanCore vulkanCore;
-    std::unique_ptr<TriangleRenderer> triangleRenderer_;
+  bool _framebufferResized = false;
 
+  static void framebufferResizeCallback(GLFWwindow *window, int width,
+                                        int height) {
+    auto app = reinterpret_cast<VkApp *>(glfwGetWindowUserPointer(window));
+    app->_framebufferResized = true;
+  }
 };

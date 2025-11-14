@@ -1,17 +1,18 @@
 // Combined vertex + fragment in one Slang file (HLSL-like syntax)
 
-struct VSOut {
+struct VSOut
+{
     float4 position : SV_Position;
-    float3 color    : COLOR0;
+    float3 color : COLOR0;
 };
 
 // Simple hard-coded triangle
-VSOut vs_main(uint vertexID : SV_VertexID)
+VSOut vs_main(uint vertexID: SV_VertexID)
 {
     float2 pos[3] = {
-        float2( 0.0, -0.5),
-        float2( 0.5,  0.5),
-        float2(-0.5,  0.5)
+        float2(0.0, -0.5),
+        float2(0.5, 0.5),
+        float2(-0.5, 0.5)
     };
 
     float3 col[3] = {

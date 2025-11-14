@@ -34,6 +34,7 @@ _install_manifest.txt
 
 # IDE/editor
 .vscode/
+.cache/
 .vs/
 .idea/
 *.code-workspace
