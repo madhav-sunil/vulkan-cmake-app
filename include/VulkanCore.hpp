@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanSwapchain.hpp"
 #include <GLFW/glfw3.h>
 #include <functional>
 #include <vector>
@@ -27,14 +28,22 @@ public:
   // Accessors for renderers
   auto device() const -> VkDevice { return _device; }
   auto physicalDevice() const -> VkPhysicalDevice { return _physicalDevice; }
-  auto extent() const -> VkExtent2D { return _extent; }
   auto renderPass() const -> VkRenderPass { return _renderPass; }
   auto descriptorPool() const -> VkDescriptorPool { return _descriptorPool; }
   auto commandPool() const -> VkCommandPool { return _commandPool; }
   auto graphicsQueue() const -> VkQueue { return _graphicsQueue; }
-  auto swapchainImageFormat() const -> VkFormat {
-    return _swapchainImageFormat;
+  auto extent() const -> VkExtent2D {
+    return _swapchainManager ? _swapchainManager->extent()
+                             : VkExtent2D{800, 600};
   }
+  auto swapchainImageFormat() const -> VkFormat {
+    return _swapchainManager ? _swapchainManager->imageFormat()
+                             : VK_FORMAT_UNDEFINED;
+  }
+
+  bool recreateSwapchain();
+
+  void waitIdle() { vkDeviceWaitIdle(_device); }
 
 private:
   // init steps
@@ -42,10 +51,10 @@ private:
   bool createSurface(GLFWwindow *window);
   bool pickPhysicalDevice();
   bool createLogicalDevice();
-  bool createSwapchain();
-  bool createImageViews();
+  // bool createSwapchain();
+  // bool createImageViews();
   bool createRenderPass();
-  bool createFramebuffers();
+  // bool createFramebuffers();
   bool createCommandPoolAndBuffers();
   bool createSyncObjects();
   bool createDescriptorPool();
@@ -53,9 +62,6 @@ private:
   // helpers
   auto chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &avail)
       -> VkSurfaceFormatKHR;
-  auto choosePresentMode(const std::vector<VkPresentModeKHR> &avail)
-      -> VkPresentModeKHR;
-  auto chooseExtent(const VkSurfaceCapabilitiesKHR &caps) -> VkExtent2D;
 
   auto checkValidationLayerSupport() const -> bool;
   auto setupDebugMessenger() -> void;
@@ -69,9 +75,9 @@ private:
 
 private:
 #ifdef NDEBUG
-  const bool enableValidationLayers_ = false;
+  const bool _enableValidationLayers = false;
 #else
-  const bool enableValidationLayers_ = true;
+  const bool _enableValidationLayers = true;
 #endif
 
   VkInstance _instance = VK_NULL_HANDLE;
@@ -85,14 +91,15 @@ private:
   uint32_t _graphicsFamily = UINT32_MAX; // store graphics queue family index
   uint32_t _presentFamily = UINT32_MAX;  // (optional, for clarity)
 
-  VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
-  std::vector<VkImage> _swapchainImages;
-  std::vector<VkImageView> _swapchainImageViews;
-  VkFormat _swapchainImageFormat = VK_FORMAT_UNDEFINED;
-  VkExtent2D _extent{800, 600};
+  std::unique_ptr<VulkanSwapchain> _swapchainManager;
+  // VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
+  // std::vector<VkImage> _swapchainImages;
+  // std::vector<VkImageView> _swapchainImageViews;
+  // VkFormat _swapchainImageFormat = VK_FORMAT_UNDEFINED;
+  // VkExtent2D _extent{800, 600};
 
   VkRenderPass _renderPass = VK_NULL_HANDLE;
-  std::vector<VkFramebuffer> _framebuffers;
+  // std::vector<VkFramebuffer> _framebuffers;
 
   VkCommandPool _commandPool = VK_NULL_HANDLE;
   std::vector<VkCommandBuffer> _commandBuffers;

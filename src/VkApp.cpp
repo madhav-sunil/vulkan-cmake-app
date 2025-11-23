@@ -52,9 +52,21 @@ void VkApp::run() {
   while (!glfwWindowShouldClose(this->getWindow())) {
     glfwPollEvents();
 
+    if (_framebufferResized) {
+      _framebufferResized = false;
+      _vulkanCore.waitIdle();
+
+      if (!_vulkanCore.recreateSwapchain()) {
+        std::cerr << "Failed to recreate swapchain after resize\n";
+        break;
+      }
+      _triangleRenderer->resize(_vulkanCore.extent());
+      std::cout << "Swapchain recreated successfully\n";
+    }
+
     // Draw frame using VulkanCore
-    bool ok = this->getVulkanInstance().drawFrame(
-        [&](VkCommandBuffer cmd, uint32_t imageIndex) {
+    bool ok =
+        _vulkanCore.drawFrame([&](VkCommandBuffer cmd, uint32_t imageIndex) {
           _triangleRenderer->recordCommands(cmd);
         });
 

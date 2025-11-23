@@ -63,7 +63,7 @@ bool VulkanCore::checkValidationLayerSupport() const {
 }
 
 void VulkanCore::setupDebugMessenger() {
-  if (!enableValidationLayers_)
+  if (!_enableValidationLayers)
     return;
 
   VkDebugUtilsMessengerCreateInfoEXT createInfo{};
@@ -84,7 +84,7 @@ void VulkanCore::setupDebugMessenger() {
 }
 
 void VulkanCore::destroyDebugMessenger() {
-  if (enableValidationLayers_ && _debugMessenger != VK_NULL_HANDLE) {
+  if (_enableValidationLayers && _debugMessenger != VK_NULL_HANDLE) {
     DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
     _debugMessenger = VK_NULL_HANDLE;
   }
@@ -119,14 +119,16 @@ bool VulkanCore::initialize(GLFWwindow *window) {
     return false;
   if (!createLogicalDevice())
     return false;
-  if (!createSwapchain())
-    return false;
-  if (!createImageViews())
-    return false;
+
+  _swapchainManager = std::make_unique<VulkanSwapchain>(
+      _device, _physicalDevice, _surface, window);
+
   if (!createRenderPass())
     return false;
-  if (!createFramebuffers())
+
+  if (!_swapchainManager->create(_renderPass))
     return false;
+
   if (!createCommandPoolAndBuffers())
     return false;
   if (!createDescriptorPool())
@@ -154,15 +156,11 @@ void VulkanCore::cleanup() {
   if (_commandPool)
     vkDestroyCommandPool(_device, _commandPool, nullptr);
 
-  for (auto fb : _framebuffers)
-    vkDestroyFramebuffer(_device, fb, nullptr);
+  if (_swapchainManager)
+    _swapchainManager->cleanup();
+
   if (_renderPass)
     vkDestroyRenderPass(_device, _renderPass, nullptr);
-
-  for (auto iv : _swapchainImageViews)
-    vkDestroyImageView(_device, iv, nullptr);
-  if (_swapchain)
-    vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 
   if (_device)
     vkDestroyDevice(_device, nullptr);
@@ -177,7 +175,7 @@ void VulkanCore::cleanup() {
 
 bool VulkanCore::createInstance() {
 
-  if (enableValidationLayers_ && !checkValidationLayerSupport()) {
+  if (_enableValidationLayers && !checkValidationLayerSupport()) {
     std::cerr << "Validation layers requested, but not available!\n";
     return false;
   }
@@ -194,7 +192,7 @@ bool VulkanCore::createInstance() {
   const char **glfwExt = glfwGetRequiredInstanceExtensions(&glfwExtCount);
   std::vector<const char *> extensions(glfwExt, glfwExt + glfwExtCount);
 
-  if (enableValidationLayers_) {
+  if (_enableValidationLayers) {
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
@@ -212,7 +210,7 @@ bool VulkanCore::createInstance() {
   createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
-  if (enableValidationLayers_) {
+  if (_enableValidationLayers) {
     createInfo.enabledLayerCount =
         static_cast<uint32_t>(validationLayers.size());
     createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -323,8 +321,8 @@ bool VulkanCore::createLogicalDevice() {
   }
 
   // store the graphics family index for later use
-  _graphicsFamily = static_cast<uint32_t>(_graphicsFamily);
-  _presentFamily = static_cast<uint32_t>(_presentFamily);
+  _graphicsFamily = static_cast<uint32_t>(graphicsFamily);
+  _presentFamily = static_cast<uint32_t>(presentFamily);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
   std::set<int> uniqueFamilies = {graphicsFamily, presentFamily};
@@ -372,115 +370,39 @@ VulkanCore::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &avail) {
   return avail[0];
 }
 
-VkPresentModeKHR
-VulkanCore::choosePresentMode(const std::vector<VkPresentModeKHR> &avail) {
-  for (const auto &p : avail)
-    if (p == VK_PRESENT_MODE_MAILBOX_KHR)
-      return p;
-  return VK_PRESENT_MODE_FIFO_KHR;
-}
+bool VulkanCore::recreateSwapchain() {
+  vkDeviceWaitIdle(_device);
 
-VkExtent2D VulkanCore::chooseExtent(const VkSurfaceCapabilitiesKHR &caps) {
-  if (caps.currentExtent.width != UINT32_MAX)
-    return caps.currentExtent;
-  // fallback: use current window size (could be improved)
-  _extent.width = std::clamp(_extent.width, caps.minImageExtent.width,
-                             caps.maxImageExtent.width);
-  _extent.height = std::clamp(_extent.height, caps.minImageExtent.height,
-                              caps.maxImageExtent.height);
-  return _extent;
-}
-
-bool VulkanCore::createSwapchain() {
-  VkSurfaceCapabilitiesKHR caps;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &caps);
-
-  uint32_t formatCount = 0;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
-                                       nullptr);
-  if (formatCount == 0)
-    return false;
-  std::vector<VkSurfaceFormatKHR> formats(formatCount);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
-                                       formats.data());
-
-  uint32_t presentCount = 0;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface,
-                                            &presentCount, nullptr);
-  std::vector<VkPresentModeKHR> presents(presentCount);
-  vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface,
-                                            &presentCount, presents.data());
-
-  VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(formats);
-  VkPresentModeKHR presentMode = choosePresentMode(presents);
-  VkExtent2D actualExtent = chooseExtent(caps);
-
-  uint32_t imageCount = caps.minImageCount + 1;
-  if (caps.maxImageCount > 0 && imageCount > caps.maxImageCount)
-    imageCount = caps.maxImageCount;
-
-  VkSwapchainCreateInfoKHR sci{};
-  sci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  sci.surface = _surface;
-  sci.minImageCount = imageCount;
-  sci.imageFormat = surfaceFormat.format;
-  sci.imageColorSpace = surfaceFormat.colorSpace;
-  sci.imageExtent = actualExtent;
-  sci.imageArrayLayers = 1;
-  sci.imageUsage =
-      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-  // assuming same queue for graphics/present for simplicity
-  sci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  sci.preTransform = caps.currentTransform;
-  sci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  sci.presentMode = presentMode;
-  sci.clipped = VK_TRUE;
-  sci.oldSwapchain = VK_NULL_HANDLE;
-
-  if (vkCreateSwapchainKHR(_device, &sci, nullptr, &_swapchain) != VK_SUCCESS) {
-    std::cerr << "failed to create swapchain\n";
+  // Let swapchain manager handle recreation
+  if (!_swapchainManager->recreate(_renderPass)) {
+    std::cerr << "Failed to recreate swapchain\n";
     return false;
   }
 
-  vkGetSwapchainImagesKHR(_device, _swapchain, &imageCount, nullptr);
-  _swapchainImages.resize(imageCount);
-  vkGetSwapchainImagesKHR(_device, _swapchain, &imageCount,
-                          _swapchainImages.data());
+  // Reallocate command buffers if needed (size might have changed)
+  vkFreeCommandBuffers(_device, _commandPool,
+                       static_cast<uint32_t>(_commandBuffers.size()),
+                       _commandBuffers.data());
 
-  _swapchainImageFormat = surfaceFormat.format;
-  _extent = actualExtent;
-  return true;
-}
+  _commandBuffers.resize(_swapchainManager->imageCount());
+  VkCommandBufferAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = _commandPool;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = static_cast<uint32_t>(_commandBuffers.size());
 
-bool VulkanCore::createImageViews() {
-  _swapchainImageViews.resize(_swapchainImages.size());
-  for (size_t i = 0; i < _swapchainImages.size(); ++i) {
-    VkImageViewCreateInfo iv{};
-    iv.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    iv.image = _swapchainImages[i];
-    iv.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    iv.format = _swapchainImageFormat;
-    iv.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    iv.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    iv.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    iv.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    iv.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    iv.subresourceRange.baseMipLevel = 0;
-    iv.subresourceRange.levelCount = 1;
-    iv.subresourceRange.baseArrayLayer = 0;
-    iv.subresourceRange.layerCount = 1;
-    if (vkCreateImageView(_device, &iv, nullptr, &_swapchainImageViews[i]) !=
-        VK_SUCCESS) {
-      std::cerr << "failed to create image views\n";
-      return false;
-    }
+  if (vkAllocateCommandBuffers(_device, &allocInfo, _commandBuffers.data()) !=
+      VK_SUCCESS) {
+    std::cerr << "Failed to reallocate command buffers\n";
+    return false;
   }
+
   return true;
 }
 
 bool VulkanCore::createRenderPass() {
   VkAttachmentDescription colorAtt{};
-  colorAtt.format = _swapchainImageFormat;
+  colorAtt.format = _swapchainManager->imageFormat();
   colorAtt.samples = VK_SAMPLE_COUNT_1_BIT;
   colorAtt.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   colorAtt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -512,27 +434,6 @@ bool VulkanCore::createRenderPass() {
   return true;
 }
 
-bool VulkanCore::createFramebuffers() {
-  _framebuffers.resize(_swapchainImageViews.size());
-  for (size_t i = 0; i < _swapchainImageViews.size(); ++i) {
-    VkImageView attachments[] = {_swapchainImageViews[i]};
-    VkFramebufferCreateInfo fci{};
-    fci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    fci.renderPass = _renderPass;
-    fci.attachmentCount = 1;
-    fci.pAttachments = attachments;
-    fci.width = _extent.width;
-    fci.height = _extent.height;
-    fci.layers = 1;
-    if (vkCreateFramebuffer(_device, &fci, nullptr, &_framebuffers[i]) !=
-        VK_SUCCESS) {
-      std::cerr << "failed to create framebuffer\n";
-      return false;
-    }
-  }
-  return true;
-}
-
 bool VulkanCore::createCommandPoolAndBuffers() {
 
   VkCommandPoolCreateInfo cpci{};
@@ -542,7 +443,7 @@ bool VulkanCore::createCommandPoolAndBuffers() {
   if (vkCreateCommandPool(_device, &cpci, nullptr, &_commandPool) != VK_SUCCESS)
     return false;
 
-  _commandBuffers.resize(_framebuffers.size());
+  _commandBuffers.resize(_swapchainManager->framebuffers().size());
   VkCommandBufferAllocateInfo cbai{};
   cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   cbai.commandPool = _commandPool;
@@ -557,13 +458,15 @@ bool VulkanCore::createCommandPoolAndBuffers() {
 bool VulkanCore::createDescriptorPool() {
   VkDescriptorPoolSize poolSizes[1]{};
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  poolSizes[0].descriptorCount = static_cast<uint32_t>(_framebuffers.size());
+  poolSizes[0].descriptorCount =
+      static_cast<uint32_t>(_swapchainManager->framebuffers().size());
 
   VkDescriptorPoolCreateInfo dpci{};
   dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   dpci.poolSizeCount = 1;
   dpci.pPoolSizes = poolSizes;
-  dpci.maxSets = static_cast<uint32_t>(_framebuffers.size());
+  dpci.maxSets =
+      static_cast<uint32_t>(_swapchainManager->framebuffers().size());
 
   if (vkCreateDescriptorPool(_device, &dpci, nullptr, &_descriptorPool) !=
       VK_SUCCESS) {
@@ -602,18 +505,18 @@ bool VulkanCore::drawFrame(
     const std::function<void(VkCommandBuffer, uint32_t)> &recordFunc) {
   vkWaitForFences(_device, 1, &_inFlightFences[_currentFrame], VK_TRUE,
                   UINT64_MAX);
-  vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
-
   uint32_t imageIndex;
-  VkResult res = vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX,
-                                       _imageAvailable[_currentFrame],
-                                       VK_NULL_HANDLE, &imageIndex);
+  VkResult res = vkAcquireNextImageKHR(
+      _device, *_swapchainManager->swapchain(), UINT64_MAX,
+      _imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
   if (res == VK_ERROR_OUT_OF_DATE_KHR)
     return false;
   if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
     std::cerr << "failed to acquire image\n";
     return false;
   }
+
+  vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
 
   // record command buffer: begin, begin renderpass, user callback, end
   // renderpass, end
@@ -628,9 +531,9 @@ bool VulkanCore::drawFrame(
   VkRenderPassBeginInfo rpbi{};
   rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   rpbi.renderPass = _renderPass;
-  rpbi.framebuffer = _framebuffers[imageIndex];
+  rpbi.framebuffer = _swapchainManager->framebuffer(imageIndex);
   rpbi.renderArea.offset = {0, 0};
-  rpbi.renderArea.extent = _extent;
+  rpbi.renderArea.extent = _swapchainManager->extent();
   rpbi.clearValueCount = 1;
   rpbi.pClearValues = &clearColor;
 
@@ -668,7 +571,7 @@ bool VulkanCore::drawFrame(
   present.waitSemaphoreCount = 1;
   present.pWaitSemaphores = &signalSem;
   present.swapchainCount = 1;
-  present.pSwapchains = &_swapchain;
+  present.pSwapchains = _swapchainManager->swapchain();
   present.pImageIndices = &imageIndex;
 
   res = vkQueuePresentKHR(_presentQueue, &present);

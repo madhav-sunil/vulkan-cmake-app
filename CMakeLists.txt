@@ -79,3 +79,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TRIANGLE_FRAG_SPV} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/
     COMMENT "Copying SPIR-V shaders to runtime directory"
 )
+
+# Set working directory so executable can find shaders
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+)
