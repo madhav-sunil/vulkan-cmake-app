@@ -45,9 +45,9 @@ VkShaderModule TriangleRenderer::loadShaderModule(const char *path) {
 void TriangleRenderer::createPipeline() {
   // Load shaders
   VkShaderModule vertModule =
-      loadShaderModule("build/bin/shaders/triangle.vert.spv");
+      loadShaderModule("build/shaders/triangle.vert.spv");
   VkShaderModule fragModule =
-      loadShaderModule("build/bin/shaders/triangle.frag.spv");
+      loadShaderModule("build/shaders/triangle.frag.spv");
 
   VkPipelineShaderStageCreateInfo vertStage{};
   vertStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

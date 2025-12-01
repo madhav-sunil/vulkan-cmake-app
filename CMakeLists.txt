@@ -58,6 +58,11 @@ set(SLANG_TRIANGLE ${CMAKE_SOURCE_DIR}/shaders/Triangle.slang)
 set(TRIANGLE_VERT_SPV ${CMAKE_BINARY_DIR}/shaders/triangle.vert.spv)
 set(TRIANGLE_FRAG_SPV ${CMAKE_BINARY_DIR}/shaders/triangle.frag.spv)
 
+set(SLANG_GRID ${CMAKE_SOURCE_DIR}/shaders/Grid.slang)
+set(GRID_VERT_SPV ${CMAKE_BINARY_DIR}/shaders/grid.vert.spv)
+set(GRID_FRAG_SPV ${CMAKE_BINARY_DIR}/shaders/grid.frag.spv)
+
+
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/shaders)
 
 add_custom_command(
@@ -69,8 +74,19 @@ add_custom_command(
     VERBATIM
 )
 
+add_custom_command(
+    OUTPUT ${GRID_VERT_SPV} ${GRID_FRAG_SPV}
+    COMMAND ${SLANGC_EXECUTABLE} -target spirv -entry vs_main -stage vertex -profile spirv_1_3 -o ${GRID_VERT_SPV} ${SLANG_GRID}
+    COMMAND ${SLANGC_EXECUTABLE} -target spirv -entry ps_main -stage fragment -profile spirv_1_3 -o ${GRID_FRAG_SPV} ${SLANG_GRID}
+    DEPENDS ${SLANG_GRID}
+    COMMENT "Compiling grid.slang to SPIR-V 1.3"
+    VERBATIM
+)
+
 add_custom_target(triangle_shaders ALL DEPENDS ${TRIANGLE_VERT_SPV} ${TRIANGLE_FRAG_SPV})
 add_dependencies(${PROJECT_NAME} triangle_shaders)
+add_custom_target(grid_shaders ALL DEPENDS ${GRID_VERT_SPV} ${GRID_FRAG_SPV})
+add_dependencies(${PROJECT_NAME} grid_shaders)
 
 # Copy shaders to runtime directory so the app can find them
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

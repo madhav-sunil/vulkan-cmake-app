@@ -1,4 +1,10 @@
-// Combined vertex + fragment in one Slang file (HLSL-like syntax)
+struct PushConstants
+{
+    float4x4 viewProj; // Combined view-projection matrix
+};
+
+[[vk::push_constant]]
+PushConstants pc;
 
 struct VSOut
 {

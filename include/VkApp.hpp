@@ -1,4 +1,5 @@
 #pragma once
+#include "GridRenderer.hpp"
 #include "TriangleRenderer.hpp"
 #include "VulkanCore.hpp"
 #include <vulkan/vulkan.h>
@@ -19,6 +20,7 @@ private:
   GLFWwindow *_window = nullptr;
   vulkan::VulkanCore _vulkanCore;
   std::unique_ptr<TriangleRenderer> _triangleRenderer;
+  std::unique_ptr<GridRenderer> _gridRenderer;
 
   bool _framebufferResized = false;
 
