@@ -70,7 +70,12 @@ void GridRenderer::createPipeline() {
   inputAssembly.sType =
       VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
   inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+#ifdef __APPLE__
+  inputAssembly.primitiveRestartEnable = VK_TRUE;
+#else
   inputAssembly.primitiveRestartEnable = VK_FALSE;
+#endif
 
   std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                                                VK_DYNAMIC_STATE_SCISSOR};
